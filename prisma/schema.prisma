@@ -23,6 +23,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   snapshots Snapshot[]
+
+  @@map("User")
 }
 
 model Snapshot {
@@ -45,4 +47,5 @@ model Snapshot {
   @@index([userId])
   @@index([contractAddress])
   @@index([createdAt])
+  @@map("Snapshot")
 }
