@@ -25,15 +25,15 @@ export function calculateTokenCount(owner: NFTOwner, tokenType: string): number 
  * @param tokenType - The token type ('ERC721' or 'ERC1155')
  * @returns The correct token count
  */
-export function calculateTokenCountFromAlchemy(owner: { tokenBalances: { balance: number }[] }, tokenType: string): number {
+export function calculateTokenCountFromAlchemy(owner: { tokenBalances: { balance: number | string }[] }, tokenType: string): number {
   if (tokenType === 'ERC721') {
     // For ERC-721, count unique tokens
     return owner.tokenBalances.length
   } else if (tokenType === 'ERC1155') {
-    // For ERC-1155, sum the balances
-    return owner.tokenBalances.reduce((sum, token) => sum + token.balance, 0)
+    // For ERC-1155, sum the balances (ensure they're numbers)
+    return owner.tokenBalances.reduce((sum, token) => sum + Number(token.balance), 0)
   } else {
     // Fallback to balance sum for unknown token types
-    return owner.tokenBalances.reduce((sum, token) => sum + token.balance, 0)
+    return owner.tokenBalances.reduce((sum, token) => sum + Number(token.balance), 0)
   }
 } 

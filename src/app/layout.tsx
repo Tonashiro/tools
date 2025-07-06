@@ -2,9 +2,11 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { SessionProvider } from "@/components/providers/session-provider";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -17,32 +19,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Snapshoter - Modern Next.js 15 Application",
+  title: "Nadtools - Monad Tooling Platform",
   description:
-    "A clean, well-structured Next.js 15 application built with best practices, featuring semantic HTML and modern UI components.",
+    "Nadtools is a powerful tooling platform built for Monad, enabling users to easily interact with collections, and activities on Monad. Empower your experience with intuitive tools designed for the Monad ecosystem.",
   keywords: [
-    "Next.js",
-    "React",
-    "TypeScript",
-    "Tailwind CSS",
-    "Modern Web Development",
+    "Monad",
+    "Nadtools",
+    "NFT",
+    "Token",
+    "Airdrop",
+    "Bulk Transfer",
+    "Messenger",
+    "Web3",
+    "Blockchain",
+    "Tooling Platform",
   ],
-  authors: [{ name: "Snapshoter Team" }],
-  creator: "Snapshoter",
+  authors: [{ name: "Tonashiro" }],
+  creator: "Tonashiro",
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://snapshoter.app",
-    title: "Snapshoter - Modern Next.js 15 Application",
+    url: "https://nadtools.app",
+    title: "Nadtools - Monad Tooling Platform",
     description:
-      "A clean, well-structured Next.js 15 application built with best practices.",
-    siteName: "Snapshoter",
+      "Nadtools is a powerful tooling platform built for Monad, enabling users to easily interact with collections, and activities on Monad. Empower your experience with intuitive tools designed for the Monad ecosystem.",
+    siteName: "Nadtools",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Snapshoter - Modern Next.js 15 Application",
+    title: "Nadtools - Monad Tooling Platform",
     description:
-      "A clean, well-structured Next.js 15 application built with best practices.",
+      "Nadtools is a powerful tooling platform built for Monad, enabling users to easily interact with collections, and activities on Monad. Empower your experience with intuitive tools designed for the Monad ecosystem.",
   },
   robots: {
     index: true,
@@ -60,15 +67,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-full flex flex-col`}
       >
-        <QueryProvider>
-          <MobileSidebar>
-            <div className="flex flex-col min-h-screen">
-              <Header />
-              <main className="flex-1">{children}</main>
-              <Footer />
-            </div>
-          </MobileSidebar>
-        </QueryProvider>
+        <SessionProvider>
+          <QueryProvider>
+            <MobileSidebar>
+              <div className="flex flex-col min-h-screen">
+                <Header />
+                <main className="flex-1">{children}</main>
+                <Footer />
+              </div>
+            </MobileSidebar>
+          </QueryProvider>
+        </SessionProvider>
+        <Toaster />
       </body>
     </html>
   );

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import type { AlchemyResponse } from "@/lib/alchemy-utils";
+import type { AlchemyResponse, Network } from "@/lib/alchemy-utils";
+import { getRpcUrl } from "@/lib/alchemy-utils";
 import { calculateTokenCountFromAlchemy } from "@/lib/token-utils";
 
 // Validation schema for the request
@@ -8,6 +9,9 @@ const querySchema = z.object({
   contractAddress: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address format"),
+  network: z
+    .enum(['Monad', 'Ethereum', 'Base', 'Abstract'])
+    .default('Monad'),
   withTokenBalances: z
     .string()
     .optional()
@@ -16,15 +20,15 @@ const querySchema = z.object({
 });
 
 // Function to get contract metadata
-async function getContractMetadata(contractAddress: string) {
+async function getContractMetadata(contractAddress: string, network: Network) {
   const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-  const monadRpcUrl = process.env.MONAD_RPC_URL;
+  const rpcUrl = getRpcUrl(network);
 
-  if (!monadRpcUrl || !alchemyApiKey) {
+  if (!rpcUrl || !alchemyApiKey) {
     throw new Error("API configuration missing");
   }
 
-  const alchemyUrl = `${monadRpcUrl}/nft/v3/${alchemyApiKey}/getContractMetadata`;
+  const alchemyUrl = `${rpcUrl}/nft/v3/${alchemyApiKey}/getContractMetadata`;
   const alchemyParams = new URLSearchParams({
     contractAddress,
   });
@@ -49,11 +53,11 @@ export async function GET(request: NextRequest) {
 
     // Get Alchemy API key from environment
     const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-    const monadRpcUrl = process.env.MONAD_RPC_URL;
+    const rpcUrl = getRpcUrl(validatedParams.network);
 
-    if (!monadRpcUrl) {
+    if (!rpcUrl) {
       return NextResponse.json(
-        { error: "Monad RPC URL not configured" },
+        { error: `${validatedParams.network} RPC URL not configured` },
         { status: 500 }
       );
     }
@@ -66,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build Alchemy API URL
-    const alchemyUrl = `${monadRpcUrl}/nft/v3/${alchemyApiKey}/getOwnersForContract`;
+    const alchemyUrl = `${rpcUrl}/nft/v3/${alchemyApiKey}/getOwnersForContract`;
 
     // Build query parameters for Alchemy
     const alchemyParams = new URLSearchParams({
@@ -95,7 +99,7 @@ export async function GET(request: NextRequest) {
     // Get contract metadata to determine token type
     let tokenType = 'ERC721'; // Default fallback
     try {
-      const metadata = await getContractMetadata(validatedParams.contractAddress);
+      const metadata = await getContractMetadata(validatedParams.contractAddress, validatedParams.network);
       tokenType = metadata.tokenType || 'ERC721';
     } catch (error) {
       console.warn('Failed to fetch contract metadata, using default ERC721:', error);
@@ -107,7 +111,7 @@ export async function GET(request: NextRequest) {
       totalTokens: calculateTokenCountFromAlchemy(owner, tokenType),
       tokens: owner.tokenBalances.map((token) => ({
         tokenId: token.tokenId,
-        balance: token.balance,
+        balance: Number(token.balance), // Ensure balance is a number
       })),
     }));
 

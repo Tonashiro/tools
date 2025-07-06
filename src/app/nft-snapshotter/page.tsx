@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import {
   Card,
   CardContent,
@@ -8,32 +9,79 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ImageIcon, Download, Search, BarChart3, Users, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  ImageIcon,
+  Download,
+  Search,
+  BarChart3,
+  Users,
+  Copy,
+  BookOpen,
+} from "lucide-react";
 import { NFTCollectionForm } from "@/components/nft/nft-collection-form";
 import { NFTOwnersList } from "@/components/nft/nft-owners-list";
 import { NFTCollectionStats } from "@/components/nft/nft-collection-stats";
-import type { NFTCollectionFormData } from "@/types/nft";
+import { useAllNFTOwners } from "@/hooks/use-nft-owners";
+import { useNFTMetadata } from "@/hooks/use-nft-metadata";
+import type { NFTCollectionFormData, Network } from "@/types/nft";
 
 export default function NFTSnapshoterPage() {
+  const { data: session } = useSession();
   const [currentContract, setCurrentContract] = useState<string | null>(null);
+  const [currentNetwork, setCurrentNetwork] = useState<Network>("Monad");
+
+  const { data: ownersData } = useAllNFTOwners({
+    contractAddress: currentContract || "",
+    network: currentNetwork,
+    enabled: !!currentContract,
+  });
+
+  const { data: metadata } = useNFTMetadata({
+    contractAddress: currentContract || "",
+    network: currentNetwork,
+    enabled: !!currentContract,
+  });
 
   const handleFormSubmit = async (data: NFTCollectionFormData) => {
     setCurrentContract(data.contractAddress);
+    setCurrentNetwork(data.network);
   };
+
+  const totalOwners = ownersData?.totalOwners || 0;
+  const totalTokens =
+    ownersData?.owners?.reduce((sum, owner) => sum + owner.totalTokens, 0) || 0;
 
   return (
     <div className="container mx-auto px-4 py-4 sm:py-6 lg:py-8">
       {/* Page Header */}
       <div className="mb-4 sm:mb-6 lg:mb-8">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-          <div className="p-2 sm:p-3 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg w-fit">
-            <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="p-2 sm:p-3 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 text-white shadow-lg w-fit">
+              <ImageIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
+                NFT Snapshoter
+              </h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
+                Capture and analyze NFT collections
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">NFT Snapshoter</h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Capture and analyze NFT collections
-            </p>
+          <div className="flex gap-2">
+            {session && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => (window.location.href = "/my-snapshots")}
+                className="gap-2"
+              >
+                <BookOpen className="h-4 w-4" />
+                My Snapshots
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -43,7 +91,17 @@ export default function NFTSnapshoterPage() {
         {/* Input Section */}
         <div className="lg:col-span-2">
           <div className="h-full">
-            <NFTCollectionForm onSubmit={handleFormSubmit} />
+            <NFTCollectionForm
+              onSubmit={handleFormSubmit}
+              contractAddress={currentContract || undefined}
+              network={currentNetwork}
+              owners={ownersData?.owners}
+              metadata={metadata || null}
+              totalOwners={totalOwners}
+              totalTokens={totalTokens}
+              isAuthenticated={!!session}
+              hasData={!!currentContract && !!ownersData?.owners}
+            />
           </div>
         </div>
 
@@ -51,7 +109,10 @@ export default function NFTSnapshoterPage() {
         <div className="lg:col-span-1">
           <div className="h-full">
             {currentContract ? (
-              <NFTCollectionStats contractAddress={currentContract} />
+              <NFTCollectionStats
+                contractAddress={currentContract}
+                network={currentNetwork}
+              />
             ) : (
               <Card className="h-full">
                 <CardHeader>
@@ -68,25 +129,33 @@ export default function NFTSnapshoterPage() {
                     <span className="text-xs sm:text-sm text-muted-foreground">
                       Total NFTs
                     </span>
-                    <span className="font-semibold text-sm sm:text-base">--</span>
+                    <span className="font-semibold text-sm sm:text-base">
+                      --
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs sm:text-sm text-muted-foreground">
                       Unique Holders
                     </span>
-                    <span className="font-semibold text-sm sm:text-base">--</span>
+                    <span className="font-semibold text-sm sm:text-base">
+                      --
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs sm:text-sm text-muted-foreground">
                       Token Type
                     </span>
-                    <span className="font-semibold text-sm sm:text-base">--</span>
+                    <span className="font-semibold text-sm sm:text-base">
+                      --
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-xs sm:text-sm text-muted-foreground">
                       Deployer
                     </span>
-                    <span className="font-semibold text-sm sm:text-base">--</span>
+                    <span className="font-semibold text-sm sm:text-base">
+                      --
+                    </span>
                   </div>
                 </CardContent>
               </Card>
@@ -98,7 +167,10 @@ export default function NFTSnapshoterPage() {
       {/* NFT Owners List */}
       {currentContract && (
         <div className="mt-4 sm:mt-6 lg:mt-8">
-          <NFTOwnersList contractAddress={currentContract} />
+          <NFTOwnersList
+            contractAddress={currentContract}
+            network={currentNetwork}
+          />
         </div>
       )}
 
@@ -149,8 +221,8 @@ export default function NFTSnapshoterPage() {
                   Holder Discovery
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  Find and analyze NFT holders with search functionality, sorting
-                  by token count, and detailed holder information.
+                  Find and analyze NFT holders with search functionality,
+                  sorting by token count, and detailed holder information.
                 </p>
               </div>
 
@@ -162,8 +234,8 @@ export default function NFTSnapshoterPage() {
                   Collection Stats
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground">
-                  View comprehensive collection statistics including total supply,
-                  unique holders, token types, and deployment details.
+                  View comprehensive collection statistics including total
+                  supply, unique holders, token types, and deployment details.
                 </p>
               </div>
 

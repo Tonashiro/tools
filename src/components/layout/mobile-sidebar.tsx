@@ -14,46 +14,61 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
-import { Home, User, Settings } from "lucide-react";
+import {
+  Home,
+  Settings,
+  ImageIcon,
+  Coins,
+  Send,
+  Gift,
+  MessageSquare,
+  ChevronRight,
+  BookOpen,
+} from "lucide-react";
 
-function AvatarWithSkeleton({ 
-  src, 
-  alt, 
-  className 
-}: { 
-  src: string
-  alt: string
-  className: string 
+function AvatarWithSkeleton({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className: string;
 }) {
-  const [isLoading, setIsLoading] = useState(true)
-  const [hasError, setHasError] = useState(false)
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   if (hasError) {
     return (
-      <div className={`${className} bg-muted flex items-center justify-center text-xs font-medium`}>
+      <div
+        className={`${className} bg-muted flex items-center justify-center text-xs font-medium`}
+      >
         {alt.charAt(0).toUpperCase()}
       </div>
-    )
+    );
   }
 
   return (
     <>
-      {isLoading && (
-        <Skeleton className={`${className} absolute`} />
-      )}
+      {isLoading && <Skeleton className={`${className} absolute`} />}
       <img
         src={src}
         alt={alt}
-        className={`${className} ${isLoading ? 'opacity-0' : 'opacity-100'} transition-opacity duration-200`}
+        className={`${className} ${
+          isLoading ? "opacity-0" : "opacity-100"
+        } transition-opacity duration-200`}
         onLoad={() => setIsLoading(false)}
         onError={() => {
-          setIsLoading(false)
-          setHasError(true)
+          setIsLoading(false);
+          setHasError(true);
         }}
       />
     </>
-  )
+  );
 }
 
 interface MobileSidebarProps {
@@ -61,9 +76,9 @@ interface MobileSidebarProps {
 }
 
 export function MobileSidebar({ children }: MobileSidebarProps) {
-  const { data } = useAuth();
-  const user = data?.data?.user;
+  const { user, isAuthenticated } = useAuth();
   const isMobile = useMediaQuery({ maxWidth: 767 });
+  const [toolsOpen, setToolsOpen] = useState(false);
 
   // On desktop, just render children without sidebar
   if (!isMobile) {
@@ -76,12 +91,12 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
         <SidebarContent>
           <SidebarHeader>
             <div className="flex items-center gap-2 px-2">
-              <span className="font-bold text-lg">Snapshoter</span>
+              <span className="font-bold text-lg">Nadtools</span>
             </div>
           </SidebarHeader>
 
           {/* User Profile Section */}
-          {user?.isAuthenticated && (
+          {isAuthenticated && user && (
             <div className="px-3 py-4 border-b">
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -112,22 +127,80 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
               </SidebarMenuButton>
             </SidebarMenuItem>
 
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="/about">
-                  <User className="h-4 w-4" />
-                  <span>About</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {isAuthenticated && (
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href="/my-snapshots">
+                    <BookOpen className="h-4 w-4" />
+                    <span>My Snapshots</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
 
+            {/* Tools Section */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild>
-                <Link href="/settings">
-                  <Settings className="h-4 w-4" />
-                  <span>Settings</span>
-                </Link>
+              <SidebarMenuButton
+                onClick={() => setToolsOpen(!toolsOpen)}
+                className="w-full"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Tools</span>
+                <ChevronRight
+                  className={`h-4 w-4 ml-auto transition-transform ${
+                    toolsOpen ? "rotate-90" : ""
+                  }`}
+                />
               </SidebarMenuButton>
+
+              {toolsOpen && (
+                <SidebarMenuSub>
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <Link href="/nft-snapshotter">
+                        <ImageIcon className="h-4 w-4" />
+                        <span>NFT Snapshoter</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <Link href="/token-snapshoter">
+                        <Coins className="h-4 w-4" />
+                        <span>Token Snapshoter</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <Link href="/bulk-nft-transfer">
+                        <Send className="h-4 w-4" />
+                        <span>Bulk NFT Transfer</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <Link href="/token-airdrop">
+                        <Gift className="h-4 w-4" />
+                        <span>Token Airdrop</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+
+                  <SidebarMenuSubItem>
+                    <SidebarMenuSubButton asChild>
+                      <Link href="/nft-messenger">
+                        <MessageSquare className="h-4 w-4" />
+                        <span>NFT Messenger</span>
+                      </Link>
+                    </SidebarMenuSubButton>
+                  </SidebarMenuSubItem>
+                </SidebarMenuSub>
+              )}
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
@@ -135,4 +208,4 @@ export function MobileSidebar({ children }: MobileSidebarProps) {
       {children}
     </SidebarProvider>
   );
-} 
+}

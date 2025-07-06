@@ -1,11 +1,11 @@
-import type { NFTOwner } from "@/types/nft";
+import type { NFTOwner, Network } from "@/types/nft";
 
-export async function downloadCSV(contractAddress: string): Promise<void> {
+export async function downloadCSV(contractAddress: string, network: Network = 'Monad'): Promise<void> {
   try {
     // Create the download URL
     const downloadUrl = `/api/nft/export?contractAddress=${encodeURIComponent(
       contractAddress
-    )}`;
+    )}&network=${encodeURIComponent(network)}`;
 
     // Create a temporary link element
     const link = document.createElement("a");
@@ -22,12 +22,12 @@ export async function downloadCSV(contractAddress: string): Promise<void> {
   }
 }
 
-export async function downloadJSON(contractAddress: string): Promise<void> {
+export async function downloadJSON(contractAddress: string, network: Network = 'Monad'): Promise<void> {
   try {
     // Create the download URL
     const downloadUrl = `/api/nft/export/json?contractAddress=${encodeURIComponent(
       contractAddress
-    )}`;
+    )}&network=${encodeURIComponent(network)}`;
 
     // Create a temporary link element
     const link = document.createElement("a");
@@ -44,12 +44,12 @@ export async function downloadJSON(contractAddress: string): Promise<void> {
   }
 }
 
-export async function downloadAirdropList(contractAddress: string, format: 'txt' | 'json' = 'txt'): Promise<void> {
+export async function downloadAirdropList(contractAddress: string, format: 'txt' | 'json' = 'txt', network: Network = 'Monad'): Promise<void> {
   try {
     // Create the download URL
     const downloadUrl = `/api/nft/export/airdrop?contractAddress=${encodeURIComponent(
       contractAddress
-    )}&format=${format}`;
+    )}&format=${format}&network=${encodeURIComponent(network)}`;
 
     // Create a temporary link element
     const link = document.createElement("a");

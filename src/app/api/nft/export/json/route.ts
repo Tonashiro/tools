@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { fetchAllOwners } from "@/lib/alchemy-utils";
+import { fetchAllOwners, getRpcUrl } from "@/lib/alchemy-utils";
+import type { Network } from "@/lib/alchemy-utils";
 import { calculateTokenCountFromAlchemy } from "@/lib/token-utils";
 
 // Validation schema for the request
@@ -8,18 +9,21 @@ const querySchema = z.object({
   contractAddress: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address format"),
+  network: z
+    .enum(['Monad', 'Ethereum', 'Base', 'Abstract'])
+    .default('Monad'),
 });
 
 // Function to get contract metadata
-async function getContractMetadata(contractAddress: string) {
+async function getContractMetadata(contractAddress: string, network: Network) {
   const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-  const monadRpcUrl = process.env.MONAD_RPC_URL;
+  const rpcUrl = getRpcUrl(network);
 
-  if (!monadRpcUrl || !alchemyApiKey) {
+  if (!rpcUrl || !alchemyApiKey) {
     throw new Error("API configuration missing");
   }
 
-  const alchemyUrl = `${monadRpcUrl}/nft/v3/${alchemyApiKey}/getContractMetadata`;
+  const alchemyUrl = `${rpcUrl}/nft/v3/${alchemyApiKey}/getContractMetadata`;
   const alchemyParams = new URLSearchParams({
     contractAddress,
   });
@@ -44,8 +48,8 @@ export async function GET(request: NextRequest) {
 
     // Fetch metadata and all owners
     const [metadata, allOwners] = await Promise.all([
-      getContractMetadata(validatedParams.contractAddress),
-      fetchAllOwners(validatedParams.contractAddress, 'JSON Export')
+      getContractMetadata(validatedParams.contractAddress, validatedParams.network),
+      fetchAllOwners(validatedParams.contractAddress, validatedParams.network, 'JSON Export')
     ]);
 
     const tokenType = metadata.tokenType || 'ERC721';
@@ -53,6 +57,7 @@ export async function GET(request: NextRequest) {
     // Transform the data for JSON export
     const jsonData = {
       contractAddress: validatedParams.contractAddress,
+      network: validatedParams.network,
       exportDate: new Date().toISOString(),
       tokenType: tokenType,
       totalHolders: allOwners.length,

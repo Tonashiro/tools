@@ -1,7 +1,7 @@
 // Types for Alchemy API response
 export interface TokenBalance {
   tokenId: string;
-  balance: number;
+  balance: number | string; // Alchemy can return balance as string for ERC-1155
 }
 
 export interface Owner {
@@ -14,26 +14,47 @@ export interface AlchemyResponse {
   pageKey?: string;
 }
 
-// Utility function to fetch all owners with pagination
-export async function fetchAllOwners(contractAddress: string, context: string = 'API'): Promise<Owner[]> {
-  const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-  const monadRpcUrl = process.env.MONAD_RPC_URL;
+// Network type
+export type Network = "Monad" | "Ethereum" | "Base" | "Abstract";
 
-  if (!monadRpcUrl || !alchemyApiKey) {
+// Function to get RPC URL based on network
+export function getRpcUrl(network: Network): string {
+  const rpcUrls = {
+    Monad: process.env.MONAD_RPC_URL,
+    Ethereum: process.env.ETHEREUM_RPC_URL,
+    Base: process.env.BASE_RPC_URL,
+    Abstract: process.env.ABSTRACT_RPC_URL,
+  };
+
+  const rpcUrl = rpcUrls[network];
+  if (!rpcUrl) {
+    throw new Error(`RPC URL not configured for network: ${network}`);
+  }
+
+  return rpcUrl;
+}
+
+// Utility function to fetch all owners with pagination
+export async function fetchAllOwners(
+  contractAddress: string,
+  network: Network = "Monad",
+  context: string = "API"
+): Promise<Owner[]> {
+  const alchemyApiKey = process.env.ALCHEMY_API_KEY;
+  const rpcUrl = getRpcUrl(network);
+
+  if (!rpcUrl || !alchemyApiKey) {
     throw new Error("API configuration missing");
   }
 
-  const alchemyUrl = `${monadRpcUrl}/nft/v3/${alchemyApiKey}/getOwnersForContract`;
+  const alchemyUrl = `${rpcUrl}/nft/v3/${alchemyApiKey}/getOwnersForContract`;
   const allOwners: Owner[] = [];
   let currentPageKey: string | undefined = undefined;
   let pageCount = 0;
   const maxPages = 1000; // Safety limit
 
-  console.log(`[${context}] Starting to fetch all owners: ${contractAddress}`);
-
   do {
     pageCount++;
-    console.log(`[${context}] Fetching page ${pageCount}...`);
 
     const alchemyParams = new URLSearchParams({
       contractAddress,
@@ -56,21 +77,19 @@ export async function fetchAllOwners(contractAddress: string, context: string = 
     allOwners.push(...data.owners);
     currentPageKey = data.pageKey;
 
-    console.log(`[${context}] Page ${pageCount}: Fetched ${data.owners.length} owners. Total so far: ${allOwners.length}`);
-
     // Safety check
     if (pageCount >= maxPages) {
-      console.warn(`[${context}] Reached maximum page limit (${maxPages}). Stopping pagination.`);
+      console.warn(
+        `[${context}] Reached maximum page limit (${maxPages}). Stopping pagination.`
+      );
       break;
     }
 
     // Add delay to avoid rate limiting
     if (currentPageKey) {
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-
   } while (currentPageKey);
 
-  console.log(`[${context}] Completed fetching all owners. Total: ${allOwners.length} owners across ${pageCount} pages.`);
   return allOwners;
-} 
+}

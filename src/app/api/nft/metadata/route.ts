@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getRpcUrl } from "@/lib/alchemy-utils";
 
 // Validation schema for the request
 const querySchema = z.object({
   contractAddress: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address format"),
+  network: z
+    .enum(['Monad', 'Ethereum', 'Base', 'Abstract'])
+    .default('Monad'),
 });
 
 // Types for Alchemy API response
@@ -32,6 +36,135 @@ interface AlchemyContractMetadataResponse {
   openseaMetadata: OpenSeaMetadata | null;
 }
 
+// Function to fetch Magic Eden data
+async function fetchMagicEdenData(contractAddress: string, network: string) {
+  try {
+    const magicEdenApiKey = process.env.MAGIC_EDEN_API_KEY;
+    
+    if (!magicEdenApiKey) {
+      console.warn("Magic Eden API key not configured, skipping Magic Eden data");
+      return null;
+    }
+
+    // Map network to Magic Eden chain
+    const getMagicEdenChain = (network: string): string => {
+      switch (network) {
+        case 'Monad':
+          return 'monad-testnet';
+        case 'Ethereum':
+          return 'ethereum';
+        case 'Base':
+          return 'base';
+        default:
+          return 'monad-testnet';
+      }
+    };
+
+    const chain = getMagicEdenChain(network);
+    const magicEdenUrl = `https://api-mainnet.magiceden.dev/v3/rtp/${chain}/collections/v7`;
+    const magicEdenParams = new URLSearchParams({
+      contract: contractAddress,
+    });
+
+    const response = await fetch(`${magicEdenUrl}?${magicEdenParams.toString()}`, {
+      headers: {
+        'Authorization': `Bearer ${magicEdenApiKey}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.warn(`Magic Eden API error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    // Find the collection that matches our contract address
+    const collection = data.collections.find(
+      (col: { primaryContract: string }) => col.primaryContract.toLowerCase() === contractAddress.toLowerCase()
+    );
+
+    if (!collection) {
+      console.warn("Collection not found on Magic Eden");
+      return null;
+    }
+
+    // Transform the data for better consumption
+    return {
+      // Basic collection info
+      name: collection.name,
+      symbol: collection.symbol,
+      description: collection.description,
+      image: collection.image,
+      banner: collection.banner,
+      externalUrl: collection.externalUrl,
+      twitterUrl: collection.twitterUrl,
+      discordUrl: collection.discordUrl,
+      twitterUsername: collection.twitterUsername,
+      
+      // Contract info
+      contractAddress: collection.primaryContract,
+      contractKind: collection.contractKind,
+      creator: collection.creator,
+      isSharedContract: collection.isSharedContract,
+      
+      // Supply and token info
+      tokenCount: parseInt(collection.tokenCount, 10),
+      supply: parseInt(collection.supply, 10),
+      remainingSupply: parseInt(collection.remainingSupply, 10),
+      onSaleCount: parseInt(collection.onSaleCount, 10),
+      ownerCount: collection.ownerCount,
+      
+      // Timestamps
+      createdAt: collection.createdAt,
+      updatedAt: collection.updatedAt,
+      contractDeployedAt: collection.contractDeployedAt,
+      mintedTimestamp: collection.mintedTimestamp,
+      lastMintTimestamp: collection.lastMintTimestamp,
+      
+      // Verification status
+      openseaVerificationStatus: collection.openseaVerificationStatus,
+      magicedenVerificationStatus: collection.magicedenVerificationStatus,
+      
+      // Collection flags
+      isSpam: collection.isSpam,
+      isNsfw: collection.isNsfw,
+      isMinting: collection.isMinting,
+      metadataDisabled: collection.metadataDisabled,
+      collectionBidSupported: collection.collectionBidSupported,
+      
+      // Sample images
+      sampleImages: collection.sampleImages,
+      
+      // Royalties
+      royalties: collection.royalties,
+      allRoyalties: collection.allRoyalties,
+      
+      // Market data
+      floorAsk: collection.floorAsk,
+      topBid: collection.topBid,
+      
+      // Rankings
+      rank: collection.rank,
+      
+      // Volume data
+      volume: collection.volume,
+      volumeChange: collection.volumeChange,
+      
+      // Floor sale data
+      floorSale: collection.floorSale,
+      floorSaleChange: collection.floorSaleChange,
+      
+      // Mint stages
+      mintStages: collection.mintStages,
+    };
+  } catch (error) {
+    console.warn("Error fetching Magic Eden data:", error);
+    return null;
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     // Parse and validate query parameters
@@ -42,11 +175,11 @@ export async function GET(request: NextRequest) {
 
     // Get environment variables
     const alchemyApiKey = process.env.ALCHEMY_API_KEY;
-    const monadRpcUrl = process.env.MONAD_RPC_URL;
+    const rpcUrl = getRpcUrl(validatedParams.network);
 
-    if (!monadRpcUrl) {
+    if (!rpcUrl) {
       return NextResponse.json(
-        { error: "Monad RPC URL not configured" },
+        { error: `${validatedParams.network} RPC URL not configured` },
         { status: 500 }
       );
     }
@@ -58,38 +191,54 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Build Alchemy API URL for contract metadata
-    const alchemyUrl = `${monadRpcUrl}/nft/v3/${alchemyApiKey}/getContractMetadata`;
+    // Fetch both Alchemy and Magic Eden data in parallel
+    const [alchemyResponse, magicEdenData] = await Promise.allSettled([
+      // Alchemy API call
+      (async () => {
+        const alchemyUrl = `${rpcUrl}/nft/v3/${alchemyApiKey}/getContractMetadata`;
+        const alchemyParams = new URLSearchParams({
+          contractAddress: validatedParams.contractAddress,
+        });
+        const response = await fetch(`${alchemyUrl}?${alchemyParams.toString()}`);
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error("Alchemy API error:", response.status, errorText);
+          throw new Error(`Alchemy API error: ${response.status}`);
+        }
+        
+        return response.json();
+      })(),
+      
+      // Magic Eden API call
+      fetchMagicEdenData(validatedParams.contractAddress, validatedParams.network)
+    ]);
 
-    // Build query parameters for Alchemy
-    const alchemyParams = new URLSearchParams({
-      contractAddress: validatedParams.contractAddress,
-    });
-
-    // Make request to Alchemy API
-    const response = await fetch(`${alchemyUrl}?${alchemyParams.toString()}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Alchemy API error:", response.status, errorText);
+    // Handle Alchemy response
+    if (alchemyResponse.status === 'rejected') {
+      console.error("Alchemy API failed:", alchemyResponse.reason);
       return NextResponse.json(
-        { error: `Alchemy API error: ${response.status}` },
-        { status: response.status }
+        { error: "Failed to fetch collection metadata" },
+        { status: 500 }
       );
     }
 
-    const data: AlchemyContractMetadataResponse = await response.json();
+    const alchemyData: AlchemyContractMetadataResponse = alchemyResponse.value;
 
-    // Transform the data for better consumption
+    // Handle Magic Eden response
+    const magicEden = magicEdenData.status === 'fulfilled' ? magicEdenData.value : null;
+
+    // Transform the Alchemy data for better consumption
     const transformedMetadata = {
-      address: data.address,
-      name: data.name,
-      symbol: data.symbol,
-      totalSupply: data.totalSupply ? parseInt(data.totalSupply, 10) : null,
-      tokenType: data.tokenType,
-      contractDeployer: data.contractDeployer,
-      deployedBlockNumber: data.deployedBlockNumber,
-      // Exclude OpenSea metadata as requested
+      address: alchemyData.address,
+      name: alchemyData.name,
+      symbol: alchemyData.symbol,
+      totalSupply: alchemyData.totalSupply ? parseInt(alchemyData.totalSupply, 10) : null,
+      tokenType: alchemyData.tokenType,
+      contractDeployer: alchemyData.contractDeployer,
+      deployedBlockNumber: alchemyData.deployedBlockNumber,
+      // Include Magic Eden data if available
+      magicEden,
     };
 
     return NextResponse.json({

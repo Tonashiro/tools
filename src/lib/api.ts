@@ -5,7 +5,9 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/a
 // Client-side API functions (for use in components with TanStack Query)
 export const clientApi = {
   async get<T>(endpoint: string): Promise<ApiResponse<T>> {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`)
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      credentials: 'include',
+    })
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
     }
@@ -19,6 +21,7 @@ export const clientApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      credentials: 'include',
     })
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -33,6 +36,7 @@ export const clientApi = {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
+      credentials: 'include',
     })
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)
@@ -43,6 +47,7 @@ export const clientApi = {
   async delete<T>(endpoint: string): Promise<ApiResponse<T>> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
+      credentials: 'include',
     })
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`)

@@ -7,6 +7,9 @@ const querySchema = z.object({
   contractAddress: z
     .string()
     .regex(/^0x[a-fA-F0-9]{40}$/, "Invalid contract address format"),
+  network: z
+    .enum(['Monad', 'Ethereum', 'Base', 'Abstract'])
+    .default('Monad'),
   format: z.enum(['txt', 'json']).default('txt'),
 });
 
@@ -19,7 +22,7 @@ export async function GET(request: NextRequest) {
     const validatedParams = querySchema.parse(queryParams);
 
     // Fetch all owners with pagination
-    const allOwners = await fetchAllOwners(validatedParams.contractAddress, 'Airdrop Export');
+    const allOwners = await fetchAllOwners(validatedParams.contractAddress, validatedParams.network, 'Airdrop Export');
 
     // Extract addresses for airdrop
     const addresses = allOwners.map(owner => owner.ownerAddress);
@@ -28,6 +31,7 @@ export async function GET(request: NextRequest) {
       // JSON format with metadata
       const jsonData = {
         contractAddress: validatedParams.contractAddress,
+        network: validatedParams.network,
         exportDate: new Date().toISOString(),
         totalAddresses: addresses.length,
         addresses: addresses,

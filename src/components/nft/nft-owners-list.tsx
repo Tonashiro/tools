@@ -1,10 +1,16 @@
-'use client'
+"use client";
 
-import { useState, useMemo } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
+import { useState, useMemo } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Pagination,
   PaginationContent,
@@ -13,238 +19,269 @@ import {
   PaginationNext,
   PaginationPrevious,
   PaginationEllipsis,
-} from '@/components/ui/pagination'
+} from "@/components/ui/pagination";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
-import { useAllNFTOwners } from '@/hooks/use-nft-owners'
-import { useNFTMetadata } from '@/hooks/use-nft-metadata'
-import { Users, ExternalLink, Copy, Check, Download, ChevronDown, Search, X, ArrowUpDown } from 'lucide-react'
-import type { NFTOwner } from '@/types/nft'
-import { downloadCSV, downloadJSON, downloadAirdropList } from '@/utils/csv-export'
-import { calculateTokenCount } from '@/lib/token-utils'
+} from "@/components/ui/dropdown-menu";
+import { useAllNFTOwners } from "@/hooks/use-nft-owners";
+import { useNFTMetadata } from "@/hooks/use-nft-metadata";
+import {
+  Users,
+  ExternalLink,
+  Copy,
+  Check,
+  Download,
+  ChevronDown,
+  Search,
+  X,
+  ArrowUpDown,
+} from "lucide-react";
+import type { NFTOwner, Network } from "@/types/nft";
+import {
+  downloadCSV,
+  downloadJSON,
+  downloadAirdropList,
+} from "@/utils/csv-export";
+import { calculateTokenCount } from "@/lib/token-utils";
 
 interface NFTOwnersListProps {
-  contractAddress: string
+  contractAddress: string;
+  network?: Network;
 }
 
-const PAGE_SIZE_OPTIONS = [25, 50, 100]
+const PAGE_SIZE_OPTIONS = [25, 50, 100];
 
-type SortOption = 'tokenCount-desc' | 'tokenCount-asc' | 'address-asc' | 'address-desc'
+type SortOption =
+  | "tokenCount-desc"
+  | "tokenCount-asc"
+  | "address-asc"
+  | "address-desc";
 
 // Utility function to format wallet addresses responsively
 const formatWalletAddress = (address: string, isMobile: boolean = false) => {
-  if (!address) return '--'
-  
+  if (!address) return "--";
+
   if (isMobile) {
     // Show first 4 and last 4 characters on mobile/tablet
-    return `${address.slice(0, 6)}...${address.slice(-4)}`
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   }
-  
-  // Show first 6 and last 4 characters on desktop
-  return `${address.slice(0, 8)}...${address.slice(-4)}`
-}
 
-export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
-  const [pageSize, setPageSize] = useState<number>(25)
-  const [currentPage, setCurrentPage] = useState<number>(1)
-  const [copiedAddress, setCopiedAddress] = useState<string | null>(null)
-  const [isExporting, setIsExporting] = useState<boolean>(false)
-  const [searchQuery, setSearchQuery] = useState<string>('')
-  const [sortBy, setSortBy] = useState<SortOption>('tokenCount-desc')
+  // Show first 6 and last 4 characters on desktop
+  return `${address.slice(0, 8)}...${address.slice(-4)}`;
+};
+
+// Utility function to format numbers without leading zeros
+const formatNumber = (num: number): string => {
+  return num.toString();
+};
+
+export function NFTOwnersList({
+  contractAddress,
+  network = "Monad",
+}: NFTOwnersListProps) {
+  const [pageSize, setPageSize] = useState<number>(25);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [sortBy, setSortBy] = useState<SortOption>("tokenCount-desc");
 
   const { data, isLoading, error } = useAllNFTOwners({
     contractAddress,
+    network,
     enabled: !!contractAddress,
-  })
+  });
 
   const { data: metadata } = useNFTMetadata({
     contractAddress,
+    network,
     enabled: !!contractAddress,
-  })
+  });
 
-  const tokenType = metadata?.tokenType || 'ERC721'
-  const isERC721 = tokenType === 'ERC721'
+  const tokenType = metadata?.tokenType || "ERC721";
+  const isERC721 = tokenType === "ERC721";
 
   // Client-side pagination for the results we receive
   const paginatedOwners = useMemo(() => {
-    if (!data?.owners) return []
-    
+    if (!data?.owners) return [];
+
     // Filter owners based on search query
-    let filteredOwners = data.owners
+    let filteredOwners = data.owners;
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      filteredOwners = data.owners.filter(owner => 
+      const query = searchQuery.toLowerCase().trim();
+      filteredOwners = data.owners.filter((owner) =>
         owner.address.toLowerCase().includes(query)
-      )
+      );
     }
-    
+
     // Sort owners based on sort option
     const sortedOwners = [...filteredOwners].sort((a, b) => {
-      const aTokenCount = calculateTokenCount(a, tokenType)
-      const bTokenCount = calculateTokenCount(b, tokenType)
-      
+      const aTokenCount = calculateTokenCount(a, tokenType);
+      const bTokenCount = calculateTokenCount(b, tokenType);
+
       switch (sortBy) {
-        case 'tokenCount-desc':
-          return bTokenCount - aTokenCount
-        case 'tokenCount-asc':
-          return aTokenCount - bTokenCount
-        case 'address-asc':
-          return a.address.toLowerCase().localeCompare(b.address.toLowerCase())
-        case 'address-desc':
-          return b.address.toLowerCase().localeCompare(a.address.toLowerCase())
+        case "tokenCount-desc":
+          return bTokenCount - aTokenCount;
+        case "tokenCount-asc":
+          return aTokenCount - bTokenCount;
+        case "address-asc":
+          return a.address.toLowerCase().localeCompare(b.address.toLowerCase());
+        case "address-desc":
+          return b.address.toLowerCase().localeCompare(a.address.toLowerCase());
         default:
-          return bTokenCount - aTokenCount
+          return bTokenCount - aTokenCount;
       }
-    })
-    
-    const startIndex = (currentPage - 1) * pageSize
-    const endIndex = startIndex + pageSize
-    
-    return sortedOwners.slice(startIndex, endIndex)
-  }, [data?.owners, currentPage, pageSize, searchQuery, sortBy, tokenType])
+    });
+
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+
+    return sortedOwners.slice(startIndex, endIndex);
+  }, [data?.owners, currentPage, pageSize, searchQuery, sortBy, tokenType]);
 
   // Calculate pagination info based on filtered data
   const filteredOwners = useMemo(() => {
-    if (!data?.owners) return []
-    
-    let filtered = data.owners
+    if (!data?.owners) return [];
+
+    let filtered = data.owners;
     if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase().trim()
-      filtered = data.owners.filter(owner => 
+      const query = searchQuery.toLowerCase().trim();
+      filtered = data.owners.filter((owner) =>
         owner.address.toLowerCase().includes(query)
-      )
+      );
     }
-    
+
     // Sort owners based on sort option
     return [...filtered].sort((a, b) => {
-      const aTokenCount = calculateTokenCount(a, tokenType)
-      const bTokenCount = calculateTokenCount(b, tokenType)
-      
-      switch (sortBy) {
-        case 'tokenCount-desc':
-          return bTokenCount - aTokenCount
-        case 'tokenCount-asc':
-          return aTokenCount - bTokenCount
-        case 'address-asc':
-          return a.address.toLowerCase().localeCompare(b.address.toLowerCase())
-        case 'address-desc':
-          return b.address.toLowerCase().localeCompare(a.address.toLowerCase())
-        default:
-          return bTokenCount - aTokenCount
-      }
-    })
-  }, [data?.owners, searchQuery, sortBy, tokenType])
+      const aTokenCount = calculateTokenCount(a, tokenType);
+      const bTokenCount = calculateTokenCount(b, tokenType);
 
-  const totalOwners = filteredOwners.length
-  const totalPages = Math.ceil(totalOwners / pageSize)
-  const startIndex = (currentPage - 1) * pageSize + 1
-  const endIndex = Math.min(startIndex + pageSize - 1, totalOwners)
+      switch (sortBy) {
+        case "tokenCount-desc":
+          return bTokenCount - aTokenCount;
+        case "tokenCount-asc":
+          return aTokenCount - bTokenCount;
+        case "address-asc":
+          return a.address.toLowerCase().localeCompare(b.address.toLowerCase());
+        case "address-desc":
+          return b.address.toLowerCase().localeCompare(a.address.toLowerCase());
+        default:
+          return bTokenCount - aTokenCount;
+      }
+    });
+  }, [data?.owners, searchQuery, sortBy, tokenType]);
+
+  const totalOwners = filteredOwners.length;
+  const totalPages = Math.ceil(totalOwners / pageSize);
+  const startIndex = (currentPage - 1) * pageSize + 1;
+  const endIndex = Math.min(startIndex + pageSize - 1, totalOwners);
 
   const handleCopyAddress = async (address: string) => {
     try {
-      await navigator.clipboard.writeText(address)
-      setCopiedAddress(address)
-      setTimeout(() => setCopiedAddress(null), 2000)
+      await navigator.clipboard.writeText(address);
+      setCopiedAddress(address);
+      setTimeout(() => setCopiedAddress(null), 2000);
     } catch (err) {
-      console.error('Failed to copy address:', err)
+      console.error("Failed to copy address:", err);
     }
-  }
+  };
 
   const handlePageSizeChange = (newPageSize: string) => {
-    const size = parseInt(newPageSize, 10)
-    setPageSize(size)
-    setCurrentPage(1) // Reset to first page when changing page size
-  }
+    const size = parseInt(newPageSize, 10);
+    setPageSize(size);
+    setCurrentPage(1); // Reset to first page when changing page size
+  };
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
-    setCurrentPage(1) // Reset to first page when searching
-  }
+    setSearchQuery(value);
+    setCurrentPage(1); // Reset to first page when searching
+  };
 
   const clearSearch = () => {
-    setSearchQuery('')
-    setCurrentPage(1)
-  }
+    setSearchQuery("");
+    setCurrentPage(1);
+  };
 
   const handleSortChange = (newSort: string) => {
-    setSortBy(newSort as SortOption)
-    setCurrentPage(1) // Reset to first page when sorting
-  }
+    setSortBy(newSort as SortOption);
+    setCurrentPage(1); // Reset to first page when sorting
+  };
 
-  const handleExport = async (format: 'csv' | 'json' | 'airdrop-txt' | 'airdrop-json') => {
-    if (!contractAddress) return
-    
-    setIsExporting(true)
+  const handleExport = async (
+    format: "csv" | "json" | "airdrop-txt" | "airdrop-json"
+  ) => {
+    if (!contractAddress) return;
+
+    setIsExporting(true);
     try {
-      if (format === 'csv') {
-        await downloadCSV(contractAddress)
-      } else if (format === 'json') {
-        await downloadJSON(contractAddress)
-      } else if (format === 'airdrop-txt') {
-        await downloadAirdropList(contractAddress, 'txt')
-      } else if (format === 'airdrop-json') {
-        await downloadAirdropList(contractAddress, 'json')
+      if (format === "csv") {
+        await downloadCSV(contractAddress, network);
+      } else if (format === "json") {
+        await downloadJSON(contractAddress, network);
+      } else if (format === "airdrop-txt") {
+        await downloadAirdropList(contractAddress, "txt", network);
+      } else if (format === "airdrop-json") {
+        await downloadAirdropList(contractAddress, "json", network);
       }
     } catch (error) {
-      console.error('Export failed:', error)
+      console.error("Export failed:", error);
       // You could add a toast notification here
     } finally {
-      setIsExporting(false)
+      setIsExporting(false);
     }
-  }
+  };
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
-    const pages = []
-    const maxVisiblePages = 5
-    
+    const pages = [];
+    const maxVisiblePages = 5;
+
     if (totalPages <= maxVisiblePages) {
       // Show all pages if total is small
       for (let i = 1; i <= totalPages; i++) {
-        pages.push(i)
+        pages.push(i);
       }
     } else {
       // Show first page, last page, and pages around current
-      pages.push(1)
-      
-      const start = Math.max(2, currentPage - 1)
-      const end = Math.min(totalPages - 1, currentPage + 1)
-      
+      pages.push(1);
+
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+
       if (start > 2) {
-        pages.push('ellipsis-start')
+        pages.push("ellipsis-start");
       }
-      
+
       for (let i = start; i <= end; i++) {
-        pages.push(i)
+        pages.push(i);
       }
-      
+
       if (end < totalPages - 1) {
-        pages.push('ellipsis-end')
+        pages.push("ellipsis-end");
       }
-      
+
       if (totalPages > 1) {
-        pages.push(totalPages)
+        pages.push(totalPages);
       }
     }
-    
-    return pages
-  }
+
+    return pages;
+  };
 
   if (isLoading) {
     return (
@@ -259,7 +296,10 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
         <CardContent>
           <div className="space-y-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+              <div
+                key={i}
+                className="flex items-center gap-4 p-4 border rounded-lg"
+              >
                 <Skeleton className="h-10 w-10 rounded-full" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-48" />
@@ -279,7 +319,7 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (error) {
@@ -294,13 +334,11 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
         <CardContent>
           <div className="text-center py-8">
             <p className="text-destructive mb-4">Error loading NFT owners</p>
-            <Button onClick={() => window.location.reload()}>
-              Try Again
-            </Button>
+            <Button onClick={() => window.location.reload()}>Try Again</Button>
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (!data?.owners || data.owners.length === 0) {
@@ -321,7 +359,7 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
   return (
@@ -337,7 +375,7 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
               Showing {startIndex}-{endIndex} of {totalOwners} owners
             </CardDescription>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-2">
             {/* Export Dropdown */}
             <DropdownMenu>
@@ -349,32 +387,34 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
                   className="flex items-center gap-2 w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4" />
-                  {isExporting ? 'Exporting...' : 'Export'}
+                  {isExporting ? "Exporting..." : "Export"}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                <DropdownMenuItem onClick={() => handleExport("csv")}>
                   Export as CSV
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('json')}>
+                <DropdownMenuItem onClick={() => handleExport("json")}>
                   Export as JSON
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => handleExport('airdrop-txt')}>
+                <DropdownMenuItem onClick={() => handleExport("airdrop-txt")}>
                   Airdrop List (TXT)
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport('airdrop-json')}>
+                <DropdownMenuItem onClick={() => handleExport("airdrop-json")}>
                   Airdrop List (JSON)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            
+
             {/* Sort and Page Size Controls */}
             <div className="flex flex-col sm:flex-row gap-2">
               {/* Sort Dropdown */}
               <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Sort:</span>
+                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                  Sort:
+                </span>
                 <Select value={sortBy} onValueChange={handleSortChange}>
                   <SelectTrigger className="w-full sm:w-40 text-xs sm:text-sm">
                     <SelectValue />
@@ -383,13 +423,17 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
                     <SelectItem value="tokenCount-desc">
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-3 w-3 sm:h-4 sm:w-4" />
-                        <span className="text-xs sm:text-sm">Most Tokens First</span>
+                        <span className="text-xs sm:text-sm">
+                          Most Tokens First
+                        </span>
                       </div>
                     </SelectItem>
                     <SelectItem value="tokenCount-asc">
                       <div className="flex items-center gap-2">
                         <ArrowUpDown className="h-3 w-3 sm:h-4 sm:w-4" />
-                        <span className="text-xs sm:text-sm">Least Tokens First</span>
+                        <span className="text-xs sm:text-sm">
+                          Least Tokens First
+                        </span>
                       </div>
                     </SelectItem>
                     <SelectItem value="address-asc">
@@ -407,11 +451,16 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
                   </SelectContent>
                 </Select>
               </div>
-              
+
               {/* Page Size Selector */}
               <div className="flex items-center gap-2">
-                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">Show:</span>
-                <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                  Show:
+                </span>
+                <Select
+                  value={pageSize.toString()}
+                  onValueChange={handlePageSizeChange}
+                >
                   <SelectTrigger className="w-20 text-xs sm:text-sm">
                     <SelectValue />
                   </SelectTrigger>
@@ -453,7 +502,8 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
           </div>
           {searchQuery && (
             <div className="mt-2 text-xs sm:text-sm text-muted-foreground">
-              Found {totalOwners} result{totalOwners !== 1 ? 's' : ''} for &ldquo;{searchQuery}&rdquo;
+              Found {totalOwners} result{totalOwners !== 1 ? "s" : ""} for
+              &ldquo;{searchQuery}&rdquo;
             </div>
           )}
         </div>
@@ -478,7 +528,10 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
             </div>
           ) : (
             paginatedOwners.map((owner: NFTOwner, index: number) => (
-              <div key={owner.address} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+              <div
+                key={owner.address}
+                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+              >
                 {/* Owner Rank */}
                 <div className="flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 bg-primary/10 rounded-full flex items-center justify-center text-xs sm:text-sm font-medium">
                   {startIndex + index}
@@ -525,14 +578,20 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
                     </div>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {calculateTokenCount(owner, tokenType)} {isERC721 ? 'unique' : 'total'} token{calculateTokenCount(owner, tokenType) !== 1 ? 's' : ''}
+                    {formatNumber(calculateTokenCount(owner, tokenType))}{" "}
+                    {isERC721 ? "unique" : "total"} token
+                    {calculateTokenCount(owner, tokenType) !== 1 ? "s" : ""}
                   </p>
                 </div>
 
                 {/* Token Count */}
                 <div className="flex-shrink-0 text-right">
-                  <p className="font-semibold text-sm sm:text-base">{calculateTokenCount(owner, tokenType)}</p>
-                  <p className="text-xs text-muted-foreground">{isERC721 ? 'tokens' : 'tokens'}</p>
+                  <p className="font-semibold text-sm sm:text-base">
+                    {formatNumber(calculateTokenCount(owner, tokenType))}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isERC721 ? "tokens" : "tokens"}
+                  </p>
                 </div>
               </div>
             ))
@@ -545,15 +604,21 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
             <Pagination>
               <PaginationContent>
                 <PaginationItem>
-                  <PaginationPrevious 
-                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  <PaginationPrevious
+                    onClick={() =>
+                      handlePageChange(Math.max(1, currentPage - 1))
+                    }
+                    className={
+                      currentPage === 1
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
                   />
                 </PaginationItem>
-                
+
                 {getPageNumbers().map((page, index) => (
                   <PaginationItem key={index}>
-                    {page === 'ellipsis-start' || page === 'ellipsis-end' ? (
+                    {page === "ellipsis-start" || page === "ellipsis-end" ? (
                       <PaginationEllipsis />
                     ) : (
                       <PaginationLink
@@ -566,20 +631,27 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
                     )}
                   </PaginationItem>
                 ))}
-                
+
                 <PaginationItem>
-                  <PaginationNext 
-                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  <PaginationNext
+                    onClick={() =>
+                      handlePageChange(Math.min(totalPages, currentPage + 1))
+                    }
+                    className={
+                      currentPage === totalPages
+                        ? "pointer-events-none opacity-50"
+                        : "cursor-pointer"
+                    }
                   />
                 </PaginationItem>
               </PaginationContent>
             </Pagination>
-            
+
             <div className="text-center mt-3 sm:mt-4 text-xs sm:text-sm text-muted-foreground">
               {searchQuery ? (
                 <>
-                  Showing {startIndex}-{endIndex} of {totalOwners} matching owners
+                  Showing {startIndex}-{endIndex} of {totalOwners} matching
+                  owners
                 </>
               ) : (
                 <>
@@ -591,5 +663,5 @@ export function NFTOwnersList({ contractAddress }: NFTOwnersListProps) {
         )}
       </CardContent>
     </Card>
-  )
-} 
+  );
+}
