@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { QueryProvider } from "@/components/providers/query-provider";
-import { SessionProvider } from "@/components/providers/session-provider";
+import { QueryProvider } from "@/providers/query-provider";
+import { SessionProvider } from "@/providers/session-provider";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { MobileSidebar } from "@/components/layout/mobile-sidebar";
 import { Toaster } from "@/components/ui/sonner";
+import { WagmiProvider } from "@/providers/wagmi-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,13 +70,15 @@ export default function RootLayout({
       >
         <SessionProvider>
           <QueryProvider>
-            <MobileSidebar>
-              <div className="flex flex-col min-h-screen">
-                <Header />
-                <main className="flex-1">{children}</main>
-                <Footer />
-              </div>
-            </MobileSidebar>
+            <WagmiProvider>
+              <MobileSidebar>
+                <div className="flex flex-col min-h-screen">
+                  <Header />
+                  <main className="flex-1">{children}</main>
+                  <Footer />
+                </div>
+              </MobileSidebar>
+            </WagmiProvider>
           </QueryProvider>
         </SessionProvider>
         <Toaster />

@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import {
   ImageIcon,
-  Coins,
+  // Coins,
   MessageSquare,
   Send,
   Gift,
@@ -31,17 +31,6 @@ const features = [
     comingSoon: false,
   },
   {
-    id: "token-snapshotter",
-    title: "Token Snapshotter",
-    description:
-      "Track token holders and analyze distribution patterns across different networks.",
-    icon: Coins,
-    href: "/token-snapshotter",
-    color: "from-blue-500 to-cyan-500",
-    gradient: "bg-gradient-to-br from-blue-500/10 to-cyan-500/10",
-    comingSoon: false,
-  },
-  {
     id: "nft-messenger",
     title: "NFT Messenger",
     description:
@@ -50,8 +39,19 @@ const features = [
     href: "/nft-messenger",
     color: "from-green-500 to-emerald-500",
     gradient: "bg-gradient-to-br from-green-500/10 to-emerald-500/10",
-    comingSoon: true,
+    comingSoon: false,
   },
+  // {
+  //   id: "token-snapshotter",
+  //   title: "Token Snapshotter",
+  //   description:
+  //     "Track token holders and analyze distribution patterns across different networks.",
+  //   icon: Coins,
+  //   href: "/token-snapshotter",
+  //   color: "from-blue-500 to-cyan-500",
+  //   gradient: "bg-gradient-to-br from-blue-500/10 to-cyan-500/10",
+  //   comingSoon: false,
+  // },
   {
     id: "bulk-nft-transfer",
     title: "Bulk NFT Transfer",

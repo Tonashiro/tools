@@ -122,8 +122,8 @@ export function Header() {
           </nav>
         )}
 
-        {/* Auth Button - Always visible */}
-        <div className="ml-auto flex items-center space-x-2">
+        {/* Auth Button and Wallet - Always visible */}
+        <div className="ml-auto flex items-center space-x-2 gap-4">
           <AuthButton />
         </div>
       </div>
