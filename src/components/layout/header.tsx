@@ -15,7 +15,6 @@ import {
   Menu,
   ChevronDown,
   ImageIcon,
-  Coins,
   Send,
   Gift,
   MessageSquare,
@@ -83,11 +82,11 @@ export function Header() {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link
-                    href="/token-snapshoter"
+                    href="/nft-messenger"
                     className="flex items-center gap-2"
                   >
-                    <Coins className="h-4 w-4" />
-                    Token Snapshoter
+                    <MessageSquare className="h-4 w-4" />
+                    NFT Messenger
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -106,15 +105,6 @@ export function Header() {
                   >
                     <Gift className="h-4 w-4" />
                     Token Airdrop
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/nft-messenger"
-                    className="flex items-center gap-2"
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    NFT Messenger
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
